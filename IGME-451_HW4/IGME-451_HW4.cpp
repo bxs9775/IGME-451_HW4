@@ -4,18 +4,38 @@
 #include "pch.h"
 #include <iostream>
 
-int main()
-{
-    std::cout << "Hello World!\n"; 
+int numberOfChairs;
+int numberOfCustomers;
+int numberOfBarbers;
+
+void Customer(void) {
+
 }
 
-// Run program: Ctrl + F5 or Debug > Start Without Debugging menu
-// Debug program: F5 or Debug > Start Debugging menu
+void Barber(void) {
 
-// Tips for Getting Started: 
-//   1. Use the Solution Explorer window to add/manage files
-//   2. Use the Team Explorer window to connect to source control
-//   3. Use the Output window to see build output and other messages
-//   4. Use the Error List window to view errors
-//   5. Go to Project > Add New Item to create new code files, or Project > Add Existing Item to add existing code files to the project
-//   6. In the future, to open this project again, go to File > Open > Project and select the .sln file
+}
+
+
+int main()
+{
+    std::cout << "How many chairs -> "; 
+	std::cin >> numberOfChairs;
+	std::cout << "How many customers -> ";
+	std::cin >> numberOfCustomers;
+	std::cout << "How many barbers -> ";
+	std::cin >> numberOfBarbers;
+
+	if (!numberOfCustomers) {
+		std::cout << "There are no customers. End program.\n";
+		return;
+	}
+	if (!numberOfChairs) {
+		std::cout << "There are no chairs for customers. End program.\n";
+		return;
+	}
+	if (!numberOfBarbers) {
+		std::cout << "There are no barbers on staff. End program.\n";
+		return;
+	}
+}
