@@ -3,6 +3,7 @@
 
 #include "pch.h"
 #include <iostream>
+#include <mutex>
 
 // Stores the number of chairs, customers, and barbers to use in the process...
 int numberOfChairs;
@@ -10,45 +11,41 @@ int numberOfCustomers;
 int numberOfBarbers;
 
 // Thread management variables
-typedef int semaphore;
-semaphore customers;
-semaphore barbers;
-semaphore chairs;
+std::mutex customerMutex;
+std::mutex barberMutex;
+std::mutex chairMutex;
 int waiting = 0;
+int customersLeft;
 
-//placeholder method for lock
-void down(semaphore mutex) {
+void get_haircut() {
+	std::cout << "Customer got their hair cut.";
 }
 
-//placeholder method for lock
-void up(semaphore mutex) {
+void cut_hair() {
+	std::cout << "Barber cut a customer's hair.";
 }
-
-void get_haircut() {}
-
-void cut_hair() {}
 
 void Customer(void) {
-	down(chairs);
+	chairMutex.lock();
 	if (waiting < numberOfChairs) {
 		waiting = waiting + 1;
-		up(customers);
-		up(chairs);
-		down(barbers);
+		customerMutex.unlock();
+		chairMutex.unlock();
+		barberMutex.lock();
 		get_haircut();
 	}
 	else {
-		up(chairs);
+		chairMutex.unlock();
 	}
 }
 
 void Barber(void) {
 	while (true) {
-		down(customers);
-		down(chairs);
+		customerMutex.lock();
+		chairMutex.lock();
 		waiting = waiting - 1;
-		up(barbers);
-		up(chairs);
+		barberMutex.unlock();
+		chairMutex.unlock();
 		cut_hair();
 	}
 }
@@ -80,7 +77,22 @@ int main()
 
 	//Using set values first to get things working...
 	numberOfChairs = 5;
-	numberOfBarbers = 1;
 	numberOfCustomers = 5;
+	numberOfBarbers = 1;
 
+	std::thread* customers = new std::thread[numberOfCustomers];
+	std::thread* barbers = new std::thread[numberOfBarbers];
+
+	for (int i = 0; i < numberOfBarbers; i++) {
+		barbers[i] = std::thread(Barber);
+	}
+	for (int i = 0; i < numberOfCustomers; i++) {
+		customers[i] = std::thread(Customer);
+	}
+	for (int i = 0; i < numberOfCustomers; i++) {
+		customers[i].join();
+	}
+
+	delete[] barbers;
+	delete[] customers;
 }
