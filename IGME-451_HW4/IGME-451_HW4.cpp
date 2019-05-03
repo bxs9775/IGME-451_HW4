@@ -17,39 +17,49 @@ std::mutex chairMutex;
 int waiting = 0;
 int customersLeft;
 
-void get_haircut() {
-	std::cout << "Customer got their hair cut.";
-}
+struct Customer {
+	int id;
 
-void cut_hair() {
-	std::cout << "Barber cut a customer's hair.";
-}
-
-void Customer(void) {
-	chairMutex.lock();
-	if (waiting < numberOfChairs) {
-		waiting = waiting + 1;
-		customerMutex.unlock();
-		chairMutex.unlock();
-		barberMutex.lock();
-		get_haircut();
-	}
-	else {
-		chairMutex.unlock();
-	}
-}
-
-void Barber(void) {
-	while (true) {
-		customerMutex.lock();
+	void operator()(int value) {
+		id = value; 
 		chairMutex.lock();
-		waiting = waiting - 1;
-		barberMutex.unlock();
-		chairMutex.unlock();
-		cut_hair();
-	}
-}
+		if (waiting < numberOfChairs) {
+			waiting = waiting + 1;
+			customerMutex.unlock();
+			chairMutex.unlock();
+			barberMutex.lock();
+			get_haircut();
+		}
+		else {
+			chairMutex.unlock();
+		}
 
+	}
+
+	void get_haircut() {
+		std::cout << "Customer #" << id << " got their hair cut.";
+	}
+};
+
+struct Barber {
+	int id;
+
+	void operator()(int value) {
+		id = value;
+		while (true) {
+			customerMutex.lock();
+			chairMutex.lock();
+			waiting = waiting - 1;
+			barberMutex.unlock();
+			chairMutex.unlock();
+			cut_hair();
+		}
+	}
+
+	void cut_hair() {
+		std::cout << "Barber #" << id << " snips away with their shears.";
+	}
+};
 
 int main()
 {
@@ -84,10 +94,10 @@ int main()
 	std::thread* barbers = new std::thread[numberOfBarbers];
 
 	for (int i = 0; i < numberOfBarbers; i++) {
-		barbers[i] = std::thread(Barber);
+		barbers[i] = std::thread(Barber(i));
 	}
 	for (int i = 0; i < numberOfCustomers; i++) {
-		customers[i] = std::thread(Customer);
+		customers[i] = std::thread(Customer(i));
 	}
 	for (int i = 0; i < numberOfCustomers; i++) {
 		customers[i].join();
