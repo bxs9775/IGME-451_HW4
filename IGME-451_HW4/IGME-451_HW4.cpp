@@ -5,6 +5,14 @@
 #include <iostream>
 #include <mutex>
 
+#define CHECK_CUSTOMERS_LEFT \
+if (customersLeft <= 0) {\
+	std::call_once(barbersEnded,[](){customerReady.notify_all();});\
+	l.unlock();\
+	chairMutex.unlock();\
+	return;\
+}
+
 // Stores the number of chairs, customers, and barbers to use in the process...
 int numberOfChairs;
 int numberOfCustomers;
@@ -23,6 +31,7 @@ int customersLeft;
 int barbersWaiting = 0;
 std::condition_variable customerReady;
 std::condition_variable barberReady;
+std::once_flag barbersEnded;
 
 
 
@@ -110,9 +119,10 @@ public:
 			*/
 			std::unique_lock<std::mutex> l(cMutex);
 			//std::cout << "B #" << id << " - waiting = " << waiting << std::endl;
-			customerReady.wait(l, [this]() { return waiting > 0; });
+			customerReady.wait(l, [this]() { return waiting > 0 | customersLeft <= 0; });
 			//std::cout << "B #" << id << " - customers waiting = " << waiting << std::endl;
 			chairMutex.lock();
+			CHECK_CUSTOMERS_LEFT
 			++barbersWaiting;
 			barberReady.notify_one();
 			waiting = waiting - 1;
@@ -120,18 +130,10 @@ public:
 			chairMutex.unlock();
 			cut_hair();
 			--barbersWaiting;
-			l.unlock();
 			chairMutex.lock();
-			if (customersLeft <= 0) {
-				chairMutex.unlock();
-				/*
-				printMutex.lock();
-				std::cout << "B #" << id << " - stopped." << std::endl;
-				printMutex.unlock();
-				*/
-				return;
-			}
+			CHECK_CUSTOMERS_LEFT
 			chairMutex.unlock();
+			l.unlock();
 		}
 	}
 private:
