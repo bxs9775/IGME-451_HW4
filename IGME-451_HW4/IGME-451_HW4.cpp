@@ -142,7 +142,6 @@ int main()
 {
 	barbersWaiting = 0;
 
-	/*
 	std::cout << "How many chairs -> "; 
 	std::cin >> numberOfChairs;
 	std::cout << "How many customers -> ";
@@ -152,22 +151,16 @@ int main()
 
 	if (!numberOfCustomers) {
 		std::cout << "There are no customers. End program.\n";
-		return;
+		return -1;
 	}
 	if (!numberOfChairs) {
 		std::cout << "There are no chairs for customers. End program.\n";
-		return;
+		return -1;
 	}
 	if (!numberOfBarbers) {
 		std::cout << "There are no barbers on staff. End program.\n";
-		return;
+		return -1;
 	}
-	*/
-
-	//Using set values first to get things working...
-	numberOfChairs = 5;
-	numberOfCustomers = 5;
-	numberOfBarbers = 1;
 
 	customersLeft = numberOfCustomers;
 
