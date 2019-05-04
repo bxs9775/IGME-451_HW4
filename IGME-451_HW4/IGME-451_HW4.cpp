@@ -12,13 +12,12 @@ int numberOfBarbers;
 
 // Thread management variables
 std::mutex lock;
-//std::mutex customerMutex;
-//std::mutex barberMutex;
+std::mutex cMutex;
+std::mutex bMutex;
 std::mutex chairMutex;
 int waiting = 0;
 int customersLeft;
 
-int customersWaiting = 0;
 int barbersWaiting = 0;
 std::condition_variable customerReady;
 std::condition_variable barberReady;
@@ -46,16 +45,14 @@ public:
 		std::cout << "C #" << id << " - started." << std::endl;
 		chairMutex.lock();
 		if (waiting < numberOfChairs) {
-			std::unique_lock<std::mutex> l(lock);
+			std::unique_lock<std::mutex> l(bMutex);
 			waiting = waiting + 1;
-			++customersWaiting;
-			std::cout << "C #" << id << " - customers waiting = " << customersWaiting << std::endl;
+			//std::cout << "C #" << id << " - customers waiting = " << waiting << std::endl;
 			customerReady.notify_one();
 			chairMutex.unlock();
 			barberReady.wait(l, [this]() { return barbersWaiting > 0; });
 			get_haircut();
-			--customersWaiting;
-			std::cout << "C #" << id << " - customers waiting = " << customersWaiting << std::endl;
+			//std::cout << "C #" << id << " - waiting = " << waiting << std::endl;
 			l.unlock();
 			std::cout << "C #" << id << " - stopped." << std::endl;
 		}
@@ -86,13 +83,13 @@ public:
 	
 	void run(){
 		while (true) {
-			std::cout << "B #" << this->id << " - started." << std::endl;
-			std::unique_lock<std::mutex> l(lock);
+			std::cout << "B #" << id << " - started." << std::endl;
+			std::unique_lock<std::mutex> l(cMutex);
 			++barbersWaiting;
 			barberReady.notify_one();
-			std::cout << "B #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
-			customerReady.wait(l, [this]() { return customersWaiting > 0; });
-			std::cout << "B #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
+			//std::cout << "B #" << this->id << " - waiting = " << waiting << std::endl;
+			customerReady.wait(l, [this]() { return waiting > 0; });
+			//std::cout << "B #" << this->id << " - customers waiting = " << waiting << std::endl;
 			chairMutex.lock();
 			waiting = waiting - 1;
 			--customersLeft;
@@ -115,7 +112,6 @@ private:
 
 int main()
 {
-	customersWaiting = 0;
 	barbersWaiting = 0;
 
 	/*
@@ -147,23 +143,23 @@ int main()
 
 	customersLeft = numberOfCustomers;
 
-	std::thread* customers = new std::thread[numberOfCustomers];
-	std::thread* barbers = new std::thread[numberOfBarbers];
+	std::thread* cThreads = new std::thread[numberOfCustomers];
+	std::thread* bThreads = new std::thread[numberOfBarbers];
 
 	for (int i = 0; i < numberOfBarbers; i++) {
-		barbers[i] = std::thread(&Barber::run,&Barber(i));
+		bThreads[i] = std::thread(&Barber::run,Barber(i));
 	}
 	for (int i = 0; i < numberOfCustomers; i++) {
-		customers[i] = std::thread(&Customer::run,&Customer(i));
+		cThreads[i] = std::thread(&Customer::run,Customer(i));
 	}
 
 	for (int i = 0; i < numberOfCustomers; i++) {
-		customers[i].join();
+		cThreads[i].join();
 	}
 	for (int i = 0; i < numberOfBarbers; i++) {
-		barbers[i].join();
+		bThreads[i].join();
 	}
 
-	delete[] customers;
-	delete[] barbers;
+	delete[] cThreads;
+	delete[] bThreads;
 }
