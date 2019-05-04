@@ -31,24 +31,29 @@ struct Customer {
 	}
 
 	void get_haircut() {
-		std::cout << "Customer #" << this->id << " got their hair cut." << std::endl;
+		
 	}
 
 	void run() {
+		std::cout << "C #" << this->id << " - started." << std::endl;
 		chairMutex.lock();
 		if (waiting < numberOfChairs) {
 			std::unique_lock<std::mutex> l(lock);
 			waiting = waiting + 1;
 			++customersWaiting;
+			std::cout << "C #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
 			customerReady.notify_one();
 			chairMutex.unlock();
 			barberReady.wait(l, [this]() { return barbersWaiting > 0; });
 			get_haircut();
 			--customersWaiting;
+			std::cout << "C #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
 			l.unlock();
+			std::cout << "C #" << this->id << " - stopped." << std::endl;
 		}
 		else {
 			--customersLeft;
+			std::cout << " #" << this->id << " - stopped." << std::endl;
 			chairMutex.unlock();
 		}
 	}
@@ -67,10 +72,13 @@ struct Barber {
 	
 	void run(){
 		while (true) {
+			std::cout << "B #" << this->id << " - started." << std::endl;
 			std::unique_lock<std::mutex> l(lock);
 			++barbersWaiting;
 			barberReady.notify_one();
+			std::cout << "B #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
 			customerReady.wait(l, [this]() { return customersWaiting > 0; });
+			std::cout << "B #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
 			chairMutex.lock();
 			waiting = waiting - 1;
 			--customersLeft;
@@ -81,6 +89,7 @@ struct Barber {
 			chairMutex.lock();
 			if (customersLeft <= 0) {
 				chairMutex.unlock();
+				std::cout << "B #" << this->id << " - stopped." << std::endl;
 				return;
 			}
 			chairMutex.unlock();
