@@ -11,11 +11,17 @@ int numberOfCustomers;
 int numberOfBarbers;
 
 // Thread management variables
-std::mutex customerMutex;
-std::mutex barberMutex;
+std::mutex lock;
+//std::mutex customerMutex;
+//std::mutex barberMutex;
 std::mutex chairMutex;
 int waiting = 0;
 int customersLeft;
+
+int customersWaiting = 0;
+int barbersWaiting = 0;
+std::condition_variable customerReady;
+std::condition_variable barberReady;
 
 struct Customer {
 	int id;
@@ -25,19 +31,24 @@ struct Customer {
 	}
 
 	void get_haircut() {
-		std::cout << "Customer #" << id << " got their hair cut.";
+		std::cout << "Customer #" << this->id << " got their hair cut." << std::endl;
 	}
 
 	void run() {
 		chairMutex.lock();
 		if (waiting < numberOfChairs) {
+			std::unique_lock<std::mutex> l(lock);
 			waiting = waiting + 1;
-			customerMutex.unlock();
+			++customersWaiting;
+			customerReady.notify_one();
 			chairMutex.unlock();
-			barberMutex.lock();
+			barberReady.wait(l, [this]() { return barbersWaiting > 0; });
 			get_haircut();
+			--customersWaiting;
+			l.unlock();
 		}
 		else {
+			--customersLeft;
 			chairMutex.unlock();
 		}
 	}
@@ -51,24 +62,38 @@ struct Barber {
 	}
 
 	void cut_hair() {
-		std::cout << "Barber #" << id << " snips away with their shears.";
+		std::cout << "Barber #" << this->id << " snips away with their shears." << std::endl;
 	}
 	
 	void run(){
 		while (true) {
-			customerMutex.lock();
+			std::unique_lock<std::mutex> l(lock);
+			++barbersWaiting;
+			barberReady.notify_one();
+			customerReady.wait(l, [this]() { return customersWaiting > 0; });
 			chairMutex.lock();
 			waiting = waiting - 1;
-			barberMutex.unlock();
+			--customersLeft;
 			chairMutex.unlock();
 			cut_hair();
+			--barbersWaiting;
+			l.unlock();
+			chairMutex.lock();
+			if (customersLeft <= 0) {
+				chairMutex.unlock();
+				return;
+			}
+			chairMutex.unlock();
 		}
 	}
 };
 
 int main()
 {
-    /*
+	customersWaiting = 0;
+	barbersWaiting = 0;
+
+	/*
 	std::cout << "How many chairs -> "; 
 	std::cin >> numberOfChairs;
 	std::cout << "How many customers -> ";
@@ -95,6 +120,8 @@ int main()
 	numberOfCustomers = 5;
 	numberOfBarbers = 1;
 
+	customersLeft = numberOfCustomers;
+
 	std::thread* customers = new std::thread[numberOfCustomers];
 	std::thread* barbers = new std::thread[numberOfBarbers];
 
@@ -104,10 +131,14 @@ int main()
 	for (int i = 0; i < numberOfCustomers; i++) {
 		customers[i] = std::thread(&Customer::run,&Customer(i));
 	}
+
 	for (int i = 0; i < numberOfCustomers; i++) {
 		customers[i].join();
 	}
+	for (int i = 0; i < numberOfBarbers; i++) {
+		barbers[i].join();
+	}
 
-	delete[] barbers;
 	delete[] customers;
+	delete[] barbers;
 }
