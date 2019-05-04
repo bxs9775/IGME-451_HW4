@@ -23,33 +23,41 @@ int barbersWaiting = 0;
 std::condition_variable customerReady;
 std::condition_variable barberReady;
 
-struct Customer {
-	int id;
+class Customer {
+public:
+	Customer() :Customer(-1) {
+
+	}
 
 	Customer(int value) {
+		std::cout << "C #" << id << " - created." << std::endl;
 		id = value;
 	}
 
+	~Customer() {
+
+	}
+
 	void get_haircut() {
-		
+		std::cout << "Customer #" << id << " got their hair cut." << std::endl;
 	}
 
 	void run() {
-		std::cout << "C #" << this->id << " - started." << std::endl;
+		std::cout << "C #" << id << " - started." << std::endl;
 		chairMutex.lock();
 		if (waiting < numberOfChairs) {
 			std::unique_lock<std::mutex> l(lock);
 			waiting = waiting + 1;
 			++customersWaiting;
-			std::cout << "C #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
+			std::cout << "C #" << id << " - customers waiting = " << customersWaiting << std::endl;
 			customerReady.notify_one();
 			chairMutex.unlock();
 			barberReady.wait(l, [this]() { return barbersWaiting > 0; });
 			get_haircut();
 			--customersWaiting;
-			std::cout << "C #" << this->id << " - customers waiting = " << customersWaiting << std::endl;
+			std::cout << "C #" << id << " - customers waiting = " << customersWaiting << std::endl;
 			l.unlock();
-			std::cout << "C #" << this->id << " - stopped." << std::endl;
+			std::cout << "C #" << id << " - stopped." << std::endl;
 		}
 		else {
 			--customersLeft;
@@ -57,17 +65,23 @@ struct Customer {
 			chairMutex.unlock();
 		}
 	}
+private:
+	int id;
 };
 
-struct Barber {
-	int id;
+class Barber {
+public:
+	Barber() :Barber(-1) {
+
+	}
 
 	Barber(int value) {
+		std::cout << "B #" << id << " - created." << std::endl;
 		id = value;
 	}
 
 	void cut_hair() {
-		std::cout << "Barber #" << this->id << " snips away with their shears." << std::endl;
+		std::cout << "Barber #" << id << " snips away with their shears." << std::endl;
 	}
 	
 	void run(){
@@ -95,6 +109,8 @@ struct Barber {
 			chairMutex.unlock();
 		}
 	}
+private:
+	int id;
 };
 
 int main()
