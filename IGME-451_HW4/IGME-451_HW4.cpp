@@ -15,12 +15,16 @@ std::mutex lock;
 std::mutex cMutex;
 std::mutex bMutex;
 std::mutex chairMutex;
+std::mutex printMutex;
+
 int waiting = 0;
 int customersLeft;
 
 int barbersWaiting = 0;
 std::condition_variable customerReady;
 std::condition_variable barberReady;
+
+
 
 class Customer {
 public:
@@ -29,7 +33,9 @@ public:
 	}
 
 	Customer(int value) {
-		std::cout << "C #" << id << " - created." << std::endl;
+		printMutex.lock();
+		std::cout << "C #" << value << " - created." << std::endl;
+		printMutex.unlock();
 		id = value;
 	}
 
@@ -38,11 +44,15 @@ public:
 	}
 
 	void get_haircut() {
+		printMutex.lock();
 		std::cout << "Customer #" << id << " got their hair cut." << std::endl;
+		printMutex.unlock();
 	}
 
 	void run() {
+		printMutex.lock();
 		std::cout << "C #" << id << " - started." << std::endl;
+		printMutex.unlock();
 		chairMutex.lock();
 		if (waiting < numberOfChairs) {
 			std::unique_lock<std::mutex> l(bMutex);
@@ -54,11 +64,15 @@ public:
 			get_haircut();
 			//std::cout << "C #" << id << " - waiting = " << waiting << std::endl;
 			l.unlock();
+			printMutex.lock();
 			std::cout << "C #" << id << " - stopped." << std::endl;
+			printMutex.unlock();
 		}
 		else {
 			--customersLeft;
-			std::cout << " #" << this->id << " - stopped." << std::endl;
+			printMutex.lock();
+			std::cout << " #" << id << " - stopped." << std::endl;
+			printMutex.unlock();
 			chairMutex.unlock();
 		}
 	}
@@ -73,23 +87,27 @@ public:
 	}
 
 	Barber(int value) {
-		std::cout << "B #" << id << " - created." << std::endl;
+		std::cout << "B #" << value << " - created." << std::endl;
 		id = value;
 	}
 
 	void cut_hair() {
+		printMutex.lock();
 		std::cout << "Barber #" << id << " snips away with their shears." << std::endl;
+		printMutex.unlock();
 	}
 	
 	void run(){
 		while (true) {
+			printMutex.lock();
 			std::cout << "B #" << id << " - started." << std::endl;
+			printMutex.unlock();
 			std::unique_lock<std::mutex> l(cMutex);
 			++barbersWaiting;
 			barberReady.notify_one();
-			//std::cout << "B #" << this->id << " - waiting = " << waiting << std::endl;
+			//std::cout << "B #" << id << " - waiting = " << waiting << std::endl;
 			customerReady.wait(l, [this]() { return waiting > 0; });
-			//std::cout << "B #" << this->id << " - customers waiting = " << waiting << std::endl;
+			//std::cout << "B #" << id << " - customers waiting = " << waiting << std::endl;
 			chairMutex.lock();
 			waiting = waiting - 1;
 			--customersLeft;
@@ -100,7 +118,9 @@ public:
 			chairMutex.lock();
 			if (customersLeft <= 0) {
 				chairMutex.unlock();
-				std::cout << "B #" << this->id << " - stopped." << std::endl;
+				printMutex.lock();
+				std::cout << "B #" << id << " - stopped." << std::endl;
+				printMutex.unlock();
 				return;
 			}
 			chairMutex.unlock();
