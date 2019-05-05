@@ -20,7 +20,7 @@ int numberOfBarbers;
 
 // *** Mutex variables ***
 // Mutex for controlling a customer's access to information on the barbers
-std::mutex bMutex;
+std::mutex barberMutex;
 // Mutex protecting waiting variable which keeps track of chair occupency
 std::mutex chairMutex;
 // Mutex protecting print operations to std::cout.
@@ -64,7 +64,7 @@ public:
 		chairMutex.lock();
 		if (waiting < numberOfChairs) {
 			// if there are chairs sit down and wait for barber
-			std::unique_lock<std::mutex> l(bMutex);
+			std::unique_lock<std::mutex> l(barberMutex);
 
 			// Lets the barbers know its ready
 			printMutex.lock();
@@ -117,22 +117,17 @@ public:
 	
 	// Runs the barber's loop that checks if customers are ready and cuts their hair.
 	void run(){
-		while (true) {
-			//Reduces but does not elimate the risk that the barber continues on with a new customer 
-			//before the current customer registers that their hair is cut
-			bMutex.lock();
-			bMutex.unlock();
-
-
-			std::unique_lock<std::mutex> l(chairMutex);
+		while (true) {std::unique_lock<std::mutex> l(chairMutex);
 			// Waits until a at least one customer is ready or all the customers have left...
 			customerReady.wait(l, [this]() { return waiting > 0 | customersLeft <= 0; });
 			CHECK_CUSTOMERS_LEFT
 			// Lets customer know its ready
+			barberMutex.lock();
+			++barbersWaiting;
+			barberMutex.unlock();
 			printMutex.lock();
 			std::cout << "Barber #" << id << " is ready to give a haircut." << std::endl;
 			printMutex.unlock();
-			++barbersWaiting;
 			barberReady.notify_one();
 
 			//Updates customer info
