@@ -10,7 +10,6 @@
 if (customersLeft <= 0) {\
 	std::call_once(barbersEnded,[](){customerReady.notify_all();});\
 	l.unlock();\
-	chairMutex.unlock();\
 	return;\
 }
 
@@ -20,8 +19,6 @@ int numberOfCustomers;
 int numberOfBarbers;
 
 // *** Mutex variables ***
-// Mutex for controlling a barber's access to information on the customers
-std::mutex cMutex;
 // Mutex for controlling a customer's access to information on the barbers
 std::mutex bMutex;
 // Mutex protecting waiting variable which keeps track of chair occupency
@@ -127,10 +124,9 @@ public:
 			bMutex.unlock();
 
 
-			std::unique_lock<std::mutex> l(cMutex);
+			std::unique_lock<std::mutex> l(chairMutex);
 			// Waits until a at least one customer is ready or all the customers have left...
 			customerReady.wait(l, [this]() { return waiting > 0 | customersLeft <= 0; });
-			chairMutex.lock();
 			CHECK_CUSTOMERS_LEFT
 			// Lets customer know its ready
 			printMutex.lock();
@@ -142,13 +138,10 @@ public:
 			//Updates customer info
 			waiting = waiting - 1;
 			--customersLeft;
-			chairMutex.unlock();
 
 			cut_hair();
 
-			chairMutex.lock();
 			CHECK_CUSTOMERS_LEFT
-			chairMutex.unlock();
 
 			l.unlock();
 		}
