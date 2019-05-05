@@ -70,6 +70,9 @@ public:
 			std::unique_lock<std::mutex> l(bMutex);
 
 			// Lets the barbers know its ready
+			printMutex.lock();
+			std::cout << "Customer #" << id << " is ready to recieve a haircut." << std::endl;
+			printMutex.unlock();
 			waiting = waiting + 1;
 			customerReady.notify_one();
 
@@ -105,7 +108,6 @@ public:
 	}
 
 	Barber(int value) {
-		std::cout << "B #" << value << " - created." << std::endl;
 		id = value;
 	}
 
@@ -131,6 +133,9 @@ public:
 			chairMutex.lock();
 			CHECK_CUSTOMERS_LEFT
 			// Lets customer know its ready
+			printMutex.lock();
+			std::cout << "Barber #" << id << " is ready to give a haircut." << std::endl;
+			printMutex.unlock();
 			++barbersWaiting;
 			barberReady.notify_one();
 
@@ -177,6 +182,8 @@ int main()
 		std::cout << "There are no barbers on staff. End program.\n";
 		return -1;
 	}
+
+	std::cout << "-----" << std::endl << std::endl;
 
 	customersLeft = numberOfCustomers;
 
