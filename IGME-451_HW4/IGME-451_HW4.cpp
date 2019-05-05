@@ -71,6 +71,7 @@ public:
 			customerReady.notify_one();
 			chairMutex.unlock();
 			barberReady.wait(l, [this]() { return barbersWaiting > 0; });
+			--barbersWaiting;
 			//std::cout << "C #" << id << " - customers waiting = " << waiting << std::endl;
 			get_haircut();
 			//std::cout << "C #" << id << " - waiting = " << waiting << std::endl;
@@ -129,7 +130,7 @@ public:
 			--customersLeft;
 			chairMutex.unlock();
 			cut_hair();
-			--barbersWaiting;
+			//--barbersWaiting;
 			chairMutex.lock();
 			CHECK_CUSTOMERS_LEFT
 			chairMutex.unlock();
