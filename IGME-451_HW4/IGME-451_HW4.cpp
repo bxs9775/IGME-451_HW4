@@ -113,6 +113,10 @@ public:
 	
 	void run(){
 		while (true) {
+			//Reduces but does not elimate the risk that the barber continues on with a new customer 
+			//before the current customer registers that their hair is cut
+			bMutex.lock();
+			bMutex.unlock();
 			/*
 			printMutex.lock();
 			std::cout << "B #" << id << " - started." << std::endl;
